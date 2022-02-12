@@ -1,5 +1,4 @@
 import React, { ComponentType } from 'react';
-import constructWithOptions from './constructors/constructWithOptions';
 import ComponentStyle from './models/ComponentStyle';
 import { DefaultTheme } from './models/ThemeProvider';
 import createWarnTooManyClasses from './utils/createWarnTooManyClasses';
@@ -12,37 +11,49 @@ export type StyledOptions<Props> = {
   shouldForwardProp?: ShouldForwardProp;
 };
 
+export type StyledNativeOptions<Props> = {
+  attrs?: Attrs<Props>[];
+  displayName?: string;
+  shouldForwardProp?: ShouldForwardProp;
+};
+
 export type BaseExtensibleObject = {
   [key: string]: any;
 };
 
 export type ExtensibleObject = BaseExtensibleObject & {
+  $as?: KnownWebTarget;
+  $forwardedAs?: KnownWebTarget;
+  as?: KnownWebTarget;
+  forwardedAs?: KnownWebTarget;
   theme?: DefaultTheme;
 };
 
-export type ExecutionContext = BaseExtensibleObject & {
+export type ExecutionContext = ExtensibleObject & {
   theme: DefaultTheme;
 };
 
 export type StyleFunction<Props> = (
   executionContext: ExecutionContext & Props
-) => Interpolation<Props>;
+) => Interpolation<StyledObject & Props>;
 
 // Do not add IStyledComponent to this union, it breaks prop function interpolation in TS
-export type Interpolation<Props = undefined> =
-  | StyleFunction<Props & ExecutionContext>
-  | ExtensibleObject
+export type Interpolation<Props> =
+  | StyleFunction<Props>
+  | StyledObject
+  | IStyledComponent<any, any>
+  | IStyledNativeComponent<any, any>
   | string
   | Keyframes
-  | Interpolation<Props & ExecutionContext>[];
+  | Interpolation<Props>[];
 
 export type Attrs<Props = ExecutionContext> =
-  | ExtensibleObject
-  | ((props: ExecutionContext & Props) => ExecutionContext);
+  | (ExtensibleObject & Props)
+  | ((props: ExecutionContext & Props) => ExecutionContext & Props);
 
-export type RuleSet<Props extends {} = {}> = Interpolation<Props>[];
+export type RuleSet<Props> = Interpolation<Props>[];
 
-export type Styles = string[] | Object | ((executionContext: ExecutionContext) => Interpolation);
+export type Styles<Props> = TemplateStringsArray | StyledObject | StyleFunction<Props>;
 
 export type KnownWebTarget =
   | keyof JSX.IntrinsicElements
@@ -56,7 +67,10 @@ export type NativeTarget = ComponentType<any> | React.ForwardRefExoticComponent<
 
 export type NameGenerator = (hash: number) => string;
 
-export type CSSConstructor = (strings: string[], ...interpolations: Interpolation[]) => RuleSet;
+export type CSSConstructor<Props> = (
+  strings: string[],
+  ...interpolations: Interpolation<Props>[]
+) => RuleSet<Props>;
 export type StyleSheet = {
   create: Function;
 };
@@ -67,13 +81,18 @@ export interface Keyframes {
   rules: string;
 }
 
-export type Flattener = (
-  chunks: Interpolation[],
+export type Flattener<Props> = (
+  chunks: Interpolation<Props>[],
   executionContext: Object | null | undefined,
   styleSheet: Object | null | undefined
-) => Interpolation[];
+) => Interpolation<Props>[];
 
-export type FlattenerResult = RuleSet | string | string[] | IStyledComponent<any> | Keyframes;
+export type FlattenerResult<Props> =
+  | RuleSet<Props>
+  | string
+  | string[]
+  | IStyledComponent<any, any>
+  | Keyframes;
 
 export interface Stringifier {
   (css: string, selector?: string, prefix?: string, componentId?: string): string;
@@ -93,23 +112,26 @@ export interface CommonStatics<Props> {
   withComponent: any;
 }
 
-export interface IStyledStatics<Props> extends CommonStatics<Props> {
+export interface IStyledStatics<OuterProps = undefined> extends CommonStatics<OuterProps> {
   componentStyle: ComponentStyle;
   // this is here because we want the uppermost displayName retained in a folding scenario
   foldedComponentIds: Array<string>;
   target: WebTarget;
   styledComponentId: string;
   warnTooManyClasses?: ReturnType<typeof createWarnTooManyClasses>;
-  withComponent: (tag: WebTarget) => IStyledComponent<WebTarget>;
+  withComponent: <Target extends WebTarget, Props = undefined>(
+    tag: Target
+  ) => IStyledComponent<Target, OuterProps & Props>;
 }
 
 type CustomComponentProps<
   ActualComponent extends WebTarget,
-  PropsToBeInjectedIntoActualComponent extends object,
+  PropsToBeInjectedIntoActualComponent extends {},
   ActualComponentProps = ActualComponent extends KnownWebTarget
-    ? React.ComponentProps<ActualComponent>
+    ? React.ComponentPropsWithRef<ActualComponent>
     : {}
-> = Omit<PropsToBeInjectedIntoActualComponent, keyof ActualComponentProps | 'as' | '$as'> &
+> = React.HTMLAttributes<ActualComponent> &
+  Omit<PropsToBeInjectedIntoActualComponent, keyof ActualComponentProps | 'as' | '$as'> &
   ActualComponentProps & {
     $as?: ActualComponent;
     as?: ActualComponent;
@@ -117,8 +139,8 @@ type CustomComponentProps<
 
 interface CustomComponent<
   FallbackComponent extends WebTarget,
-  ExpectedProps extends {} = {},
-  PropsToBeInjectedIntoActualComponent extends {} = {}
+  ExpectedProps = {},
+  PropsToBeInjectedIntoActualComponent = {}
 > extends React.ForwardRefExoticComponent<ExpectedProps> {
   <ActualComponent extends WebTarget = FallbackComponent>(
     props: CustomComponentProps<ActualComponent, ExpectedProps>
@@ -127,65 +149,52 @@ interface CustomComponent<
       ActualComponent,
       ExecutionContext & ExpectedProps & PropsToBeInjectedIntoActualComponent
     >,
-    WebTarget
+    ActualComponent
   >;
 }
 
-export interface IStyledComponent<Target extends WebTarget, Props extends {} = {}>
+export interface IStyledComponent<Target extends WebTarget, Props = undefined>
   extends CustomComponent<Target, Props>,
     IStyledStatics<Props> {
-  defaultProps?: Partial<Props>;
+  defaultProps?: Partial<BaseExtensibleObject & Props>;
   toString: () => string;
 }
 
-export type IStyledComponentFactory<Target extends WebTarget, Props extends {} = {}> = (
+export type IStyledComponentFactory<Target extends WebTarget, Props = undefined> = (
   target: Target,
   options: StyledOptions<Props>,
   rules: RuleSet<Props>
 ) => IStyledComponent<Target, Props>;
 
-export interface IStyledNativeStatics<Target extends NativeTarget, Props extends {} = {}>
-  extends CommonStatics<Props> {
-  inlineStyle: InstanceType<IInlineStyleConstructor>;
+export interface IStyledNativeStatics<OuterProps = undefined> extends CommonStatics<OuterProps> {
+  inlineStyle: InstanceType<IInlineStyleConstructor<OuterProps>>;
   target: NativeTarget;
-  withComponent: (tag: NativeTarget) => IStyledNativeComponent<Target, Props>;
+  withComponent: <Target extends NativeTarget, Props = undefined>(
+    tag: Target
+  ) => IStyledNativeComponent<Target, OuterProps & Props>;
 }
 
-export interface IStyledNativeComponent<Target extends NativeTarget, Props extends {} = {}>
+export interface IStyledNativeComponent<Target extends NativeTarget, Props = undefined>
   extends CustomComponent<Target, Props>,
-    IStyledNativeStatics<Target, Props> {
+    IStyledNativeStatics<Props> {
   defaultProps?: Partial<Props>;
 }
 
-export type IStyledNativeComponentFactory<Target extends NativeTarget, Props extends {} = {}> = (
-  target: IStyledNativeComponent<Target>['target'],
-  options: {
-    attrs?: Attrs<Props>[];
-    displayName?: string;
-    shouldForwardProp?: ShouldForwardProp;
-  },
-  rules: RuleSet
-) => IStyledNativeComponent<Target>;
-export interface IInlineStyleConstructor {
-  new (rules: RuleSet): IInlineStyle;
+export type IStyledNativeComponentFactory<Target extends NativeTarget, Props = undefined> = (
+  target: NativeTarget,
+  options: StyledNativeOptions<Props>,
+  rules: RuleSet<Props>
+) => IStyledNativeComponent<Target, Props>;
+export interface IInlineStyleConstructor<Props = undefined> {
+  new (rules: RuleSet<Props>): IInlineStyle<Props>;
 }
 
-export interface IInlineStyle {
-  rules: RuleSet;
+export interface IInlineStyle<Props = undefined> {
+  rules: RuleSet<Props>;
   generateStyleObject(executionContext: Object): Object;
 }
 
 export type StyledTarget = WebTarget | NativeTarget;
-
-export type StyledTemplateFunction = ReturnType<typeof constructWithOptions>;
-
-type StyledElementShortcuts = {
-  [key in keyof JSX.IntrinsicElements]?: StyledTemplateFunction;
-};
-
-export interface Styled extends StyledElementShortcuts {
-  (tag: WebTarget): StyledTemplateFunction;
-}
 
 type CSSValue = string | number;
 

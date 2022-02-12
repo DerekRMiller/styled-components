@@ -3,10 +3,12 @@ import StyleSheet from '../sheet';
 import {
   ExecutionContext,
   ExtensibleObject,
+  FlattenerResult,
   Interpolation,
   IStyledComponent,
   RuleSet,
   Stringifier,
+  StyledObject,
 } from '../types';
 import addUnitIfNeeded from './addUnitIfNeeded';
 import getComponentName from './getComponentName';
@@ -40,18 +42,17 @@ export const objToCssArray = (obj: ExtensibleObject, prevKey?: string): string[]
   return prevKey ? [`${prevKey} {`, ...rules, '}'] : rules;
 };
 
-// TODO: use overloads to make this type less crazy
-export default function flatten(
-  chunk: Interpolation<{}>,
-  executionContext?: ExecutionContext,
+export default function flatten<Props = {}>(
+  chunk: Interpolation<Props>,
+  executionContext?: ExecutionContext & Props,
   styleSheet?: StyleSheet,
   stylisInstance?: Stringifier
-): RuleSet | string | IStyledComponent<any> | Keyframes {
+): FlattenerResult<Props> {
   if (Array.isArray(chunk)) {
-    const ruleSet: RuleSet = [];
+    const ruleSet: RuleSet<Props> = [];
 
     for (let i = 0, len = chunk.length, result; i < len; i += 1) {
-      result = flatten(chunk[i], executionContext, styleSheet, stylisInstance);
+      result = flatten<Props>(chunk[i], executionContext, styleSheet, stylisInstance);
 
       if (result === '') continue;
       else if (Array.isArray(result)) ruleSet.push(...result);
@@ -67,13 +68,13 @@ export default function flatten(
 
   /* Handle other components */
   if (isStyledComponent(chunk)) {
-    return `.${(chunk as IStyledComponent<any>).styledComponentId}`;
+    return `.${(chunk as unknown as IStyledComponent<'div', any>).styledComponentId}`;
   }
 
   /* Either execute or defer the function */
   if (isFunction(chunk)) {
     if (isStatelessFunction(chunk) && executionContext) {
-      const chunkFn = chunk as Function;
+      const chunkFn = chunk as (props: {}) => Interpolation<Props>;
       const result = chunkFn(executionContext);
 
       if (
@@ -86,13 +87,14 @@ export default function flatten(
         // eslint-disable-next-line no-console
         console.error(
           `${getComponentName(
+            // @ts-expect-error handling unexpected input
             chunkFn as React.ComponentType<any>
           )} is not a styled component and cannot be referred to via component selector. See https://www.styled-components.com/docs/advanced#referring-to-other-components for more details.`
         );
       }
 
       return flatten(result, executionContext, styleSheet, stylisInstance);
-    } else return chunk as IStyledComponent<any>;
+    } else return chunk as unknown as IStyledComponent<'div', any>;
   }
 
   if (chunk instanceof Keyframes) {
@@ -103,5 +105,5 @@ export default function flatten(
   }
 
   /* Handle objects */
-  return isPlainObject(chunk) ? objToCssArray(chunk as ExtensibleObject) : chunk.toString();
+  return isPlainObject(chunk) ? objToCssArray(chunk as StyledObject) : chunk.toString();
 }

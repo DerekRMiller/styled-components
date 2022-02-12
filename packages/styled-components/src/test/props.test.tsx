@@ -37,8 +37,11 @@ describe('props', () => {
     const Comp = styled.div<{ fg: string }>`
       ${() => ({
         borderWidth: 0,
+        // @ts-expect-error improper input
         colorA: null,
+        // @ts-expect-error improper input
         colorB: false,
+        // @ts-expect-error improper input
         colorC: undefined,
         colorD: '',
       })};

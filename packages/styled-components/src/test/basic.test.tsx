@@ -188,7 +188,7 @@ describe('basic', () => {
   });
 
   it('does not filter outs custom props for uppercased string-like components', () => {
-    const Comp = styled('Comp')`
+    const Comp = styled('Comp')<{ customProp: string }>`
       color: red;
     `;
     const wrapper = TestRenderer.create(<Comp customProp="abc" />);
@@ -327,7 +327,7 @@ describe('basic', () => {
     });
 
     it('should hoist non-react static properties', () => {
-      const Inner = styled.div``;
+      const Inner = styled.div<{}, { foo: string }>``;
       Inner.foo = 'bar';
 
       const Outer = styled(Inner)``;
