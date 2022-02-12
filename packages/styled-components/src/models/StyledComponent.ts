@@ -179,7 +179,7 @@ function useStyledComponentImpl<Target extends WebTarget>(
   return createElement(elementToBeCreated, propsForElement);
 }
 
-const createStyledComponent = <Target extends WebTarget>(
+const createStyledComponent = <Target extends WebTarget, Props>(
   target: Target,
   options: StyledOptions,
   rules: RuleSet
@@ -277,7 +277,7 @@ const createStyledComponent = <Target extends WebTarget>(
       componentId: newComponentId,
     };
 
-    return createStyledComponent<Target>(tag, newOptions, rules);
+    return createStyledComponent<Target, Props>(tag, newOptions, rules);
   };
 
   Object.defineProperty(WrappedStyledComponent, 'defaultProps', {
@@ -319,7 +319,7 @@ const createStyledComponent = <Target extends WebTarget>(
         styledComponentId: true,
         target: true,
         withComponent: true,
-      } as { [key in keyof IStyledStatics]: true }
+      } as { [key in keyof IStyledStatics<Props>]: true }
     );
   }
 

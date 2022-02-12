@@ -1,6 +1,13 @@
 import Keyframes from '../models/Keyframes';
 import StyleSheet from '../sheet';
-import { ExtensibleObject, Interpolation, IStyledComponent, RuleSet, Stringifier } from '../types';
+import {
+  ExecutionContext,
+  ExtensibleObject,
+  Interpolation,
+  IStyledComponent,
+  RuleSet,
+  Stringifier,
+} from '../types';
 import addUnitIfNeeded from './addUnitIfNeeded';
 import getComponentName from './getComponentName';
 import hyphenate from './hyphenateStyleName';
@@ -35,11 +42,11 @@ export const objToCssArray = (obj: ExtensibleObject, prevKey?: string): string[]
 
 // TODO: use overloads to make this type less crazy
 export default function flatten(
-  chunk: Interpolation,
-  executionContext?: ExtensibleObject,
+  chunk: Interpolation<{}>,
+  executionContext?: ExecutionContext,
   styleSheet?: StyleSheet,
   stylisInstance?: Stringifier
-): RuleSet | string | IStyledComponent | Keyframes {
+): RuleSet | string | IStyledComponent<any> | Keyframes {
   if (Array.isArray(chunk)) {
     const ruleSet: RuleSet = [];
 
@@ -60,7 +67,7 @@ export default function flatten(
 
   /* Handle other components */
   if (isStyledComponent(chunk)) {
-    return `.${(chunk as IStyledComponent).styledComponentId}`;
+    return `.${(chunk as IStyledComponent<any>).styledComponentId}`;
   }
 
   /* Either execute or defer the function */
@@ -85,7 +92,7 @@ export default function flatten(
       }
 
       return flatten(result, executionContext, styleSheet, stylisInstance);
-    } else return chunk as IStyledComponent;
+    } else return chunk as IStyledComponent<any>;
   }
 
   if (chunk instanceof Keyframes) {

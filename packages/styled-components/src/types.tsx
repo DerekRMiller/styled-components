@@ -1,11 +1,11 @@
-import React, { ComponentType, ForwardRefExoticComponent } from 'react';
+import React, { ComponentType } from 'react';
 import constructWithOptions from './constructors/constructWithOptions';
 import ComponentStyle from './models/ComponentStyle';
 import { DefaultTheme } from './models/ThemeProvider';
 import createWarnTooManyClasses from './utils/createWarnTooManyClasses';
 
-export type StyledOptions = {
-  attrs?: Attrs[];
+export type StyledOptions<Props> = {
+  attrs?: Attrs<Props>[];
   componentId?: string;
   displayName?: string;
   parentComponentId?: string;
@@ -26,20 +26,21 @@ export type ExecutionContext = BaseExtensibleObject & {
 
 export type StyleFunction<Props> = (
   executionContext: ExecutionContext & Props
-) => BaseExtensibleObject | string | number;
+) => Interpolation<Props>;
 
 // Do not add IStyledComponent to this union, it breaks prop function interpolation in TS
-export type Interpolation<Props extends Object = ExecutionContext> =
-  | StyleFunction<Props>
+export type Interpolation<Props = undefined> =
+  | StyleFunction<Props & ExecutionContext>
   | ExtensibleObject
   | string
-  | Keyframe
-  | Interpolation<Props>[];
+  | Keyframes
+  | Interpolation<Props & ExecutionContext>[];
 
 export type Attrs<Props = ExecutionContext> =
   | ExtensibleObject
   | ((props: ExecutionContext & Props) => ExecutionContext);
-export type RuleSet = Interpolation[];
+
+export type RuleSet<Props extends {} = {}> = Interpolation<Props>[];
 
 export type Styles = string[] | Object | ((executionContext: ExecutionContext) => Interpolation);
 
@@ -85,14 +86,14 @@ export type ShouldForwardProp = (
   elementToBeCreated?: WebTarget | NativeTarget
 ) => boolean;
 
-export interface CommonStatics {
-  attrs: Attrs[];
+export interface CommonStatics<Props> {
+  attrs: Attrs<Props>[];
   target: StyledTarget;
   shouldForwardProp?: ShouldForwardProp;
   withComponent: any;
 }
 
-export interface IStyledStatics extends CommonStatics {
+export interface IStyledStatics<Props> extends CommonStatics<Props> {
   componentStyle: ComponentStyle;
   // this is here because we want the uppermost displayName retained in a folding scenario
   foldedComponentIds: Array<string>;
@@ -108,57 +109,63 @@ type CustomComponentProps<
   ActualComponentProps = ActualComponent extends KnownWebTarget
     ? React.ComponentProps<ActualComponent>
     : {}
-> = Omit<PropsToBeInjectedIntoActualComponent, keyof ActualComponentProps | 'as'> &
-  Omit<ActualComponentProps, keyof PropsToBeInjectedIntoActualComponent> & {
+> = Omit<PropsToBeInjectedIntoActualComponent, keyof ActualComponentProps | 'as' | '$as'> &
+  ActualComponentProps & {
+    $as?: ActualComponent;
     as?: ActualComponent;
   };
 
 interface CustomComponent<
   FallbackComponent extends WebTarget,
-  PropsToBeInjectedIntoActualComponent extends object = {}
-> extends React.ForwardRefExoticComponent<any> {
+  ExpectedProps extends {} = {},
+  PropsToBeInjectedIntoActualComponent extends {} = {}
+> extends React.ForwardRefExoticComponent<ExpectedProps> {
   <ActualComponent extends WebTarget = FallbackComponent>(
-    props: CustomComponentProps<ActualComponent, PropsToBeInjectedIntoActualComponent>
+    props: CustomComponentProps<ActualComponent, ExpectedProps>
   ): React.ReactElement<
-    CustomComponentProps<ActualComponent, PropsToBeInjectedIntoActualComponent>
+    CustomComponentProps<
+      ActualComponent,
+      ExecutionContext & ExpectedProps & PropsToBeInjectedIntoActualComponent
+    >,
+    WebTarget
   >;
 }
 
-export interface IStyledComponent<Target extends WebTarget>
-  extends CustomComponent<Target>,
-    IStyledStatics {
-  defaultProps?: Object;
+export interface IStyledComponent<Target extends WebTarget, Props extends {} = {}>
+  extends CustomComponent<Target, Props>,
+    IStyledStatics<Props> {
+  defaultProps?: Partial<Props>;
   toString: () => string;
 }
 
-export type IStyledComponentFactory<Target extends WebTarget> = (
+export type IStyledComponentFactory<Target extends WebTarget, Props extends {} = {}> = (
   target: Target,
-  options: StyledOptions,
-  rules: RuleSet
-) => IStyledComponent<Target>;
+  options: StyledOptions<Props>,
+  rules: RuleSet<Props>
+) => IStyledComponent<Target, Props>;
 
-export interface IStyledNativeStatics extends CommonStatics {
+export interface IStyledNativeStatics<Target extends NativeTarget, Props extends {} = {}>
+  extends CommonStatics<Props> {
   inlineStyle: InstanceType<IInlineStyleConstructor>;
   target: NativeTarget;
-  withComponent: (tag: NativeTarget) => IStyledNativeComponent;
+  withComponent: (tag: NativeTarget) => IStyledNativeComponent<Target, Props>;
 }
 
-export interface IStyledNativeComponent
-  extends ForwardRefExoticComponent<ExtensibleObject>,
-    IStyledNativeStatics {
-  defaultProps?: Object;
+export interface IStyledNativeComponent<Target extends NativeTarget, Props extends {} = {}>
+  extends CustomComponent<Target, Props>,
+    IStyledNativeStatics<Target, Props> {
+  defaultProps?: Partial<Props>;
 }
 
-export type IStyledNativeComponentFactory = (
-  target: IStyledNativeComponent['target'],
+export type IStyledNativeComponentFactory<Target extends NativeTarget, Props extends {} = {}> = (
+  target: IStyledNativeComponent<Target>['target'],
   options: {
-    attrs?: Attrs[];
+    attrs?: Attrs<Props>[];
     displayName?: string;
     shouldForwardProp?: ShouldForwardProp;
   },
   rules: RuleSet
-) => IStyledNativeComponent;
-
+) => IStyledNativeComponent<Target>;
 export interface IInlineStyleConstructor {
   new (rules: RuleSet): IInlineStyle;
 }
