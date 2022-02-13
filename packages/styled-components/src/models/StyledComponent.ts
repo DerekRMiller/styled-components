@@ -285,7 +285,11 @@ const createStyledComponent = <Target extends WebTarget, OuterProps = {}, Static
       componentId: newComponentId,
     } as StyledOptions<OuterProps & Props>;
 
-    return createStyledComponent<Target, OuterProps & Props, Statics>(tag, newOptions, rules);
+    return createStyledComponent<Target, OuterProps & Props, Statics>(
+      tag,
+      newOptions,
+      rules as RuleSet<OuterProps & Props>
+    );
   };
 
   Object.defineProperty(WrappedStyledComponent, 'defaultProps', {

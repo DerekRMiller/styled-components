@@ -35,7 +35,7 @@ export type ExecutionContext = ExtensibleObject & {
 
 export type StyleFunction<Props> = (
   executionContext: ExecutionContext & Props
-) => Interpolation<StyledObject & Props>;
+) => string | StyledObject | CSSConstructor<Props>;
 
 // Do not add IStyledComponent to this union, it breaks prop function interpolation in TS
 export type Interpolation<Props> =
@@ -143,7 +143,10 @@ interface CustomComponent<
   PropsToBeInjectedIntoActualComponent = {}
 > extends React.ForwardRefExoticComponent<ExpectedProps> {
   <ActualComponent extends WebTarget = FallbackComponent>(
-    props: CustomComponentProps<ActualComponent, ExpectedProps>
+    props: CustomComponentProps<
+      ActualComponent,
+      ExpectedProps & PropsToBeInjectedIntoActualComponent
+    >
   ): React.ReactElement<
     CustomComponentProps<
       ActualComponent,
@@ -154,7 +157,7 @@ interface CustomComponent<
 }
 
 export interface IStyledComponent<Target extends WebTarget, Props = undefined>
-  extends CustomComponent<Target, Props>,
+  extends CustomComponent<Target, Props, ExecutionContext>,
     IStyledStatics<Props> {
   defaultProps?: Partial<BaseExtensibleObject & Props>;
   toString: () => string;
