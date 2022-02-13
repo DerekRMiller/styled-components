@@ -40,13 +40,12 @@ export type StyleFunction<Props> = (
 export type Interpolation<Props> =
   | StyleFunction<Props>
   | StyledObject
-  | IStyledComponent<any, any>
-  | IStyledNativeComponent<any, any>
   | string
+  | number
   | Keyframes
   | Interpolation<Props>[];
 
-export type Attrs<Props = ExecutionContext> =
+export type Attrs<Props> =
   | (ExtensibleObject & Props)
   | ((props: ExecutionContext & Props) => ExecutionContext & Props);
 
@@ -89,6 +88,7 @@ export type Flattener<Props> = (
 
 export type FlattenerResult<Props> =
   | RuleSet<Props>
+  | number
   | string
   | string[]
   | IStyledComponent<any, any>
@@ -202,7 +202,7 @@ export type StyledTarget = WebTarget | NativeTarget;
 type CSSValue = string | number;
 
 export type StyledObject = {
-  [key: string]: StyledObject | CSSValue | ((...any: any[]) => CSSValue);
+  [key: string]: Record<string, any> | CSSValue | StyleFunction<ExecutionContext>;
 } & {
   // uncomment when we can eventually override index signatures with more specific types
   // [K in keyof CSS.Properties]: CSS.Properties[K] | ((...any: any[]) => CSS.Properties[K]);

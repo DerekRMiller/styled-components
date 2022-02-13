@@ -3,7 +3,6 @@ import StyleSheet from '../sheet';
 import {
   ExecutionContext,
   ExtensibleObject,
-  FlattenerResult,
   Interpolation,
   IStyledComponent,
   RuleSet,
@@ -47,7 +46,7 @@ export default function flatten<Props = {}>(
   executionContext?: ExecutionContext & Props,
   styleSheet?: StyleSheet,
   stylisInstance?: Stringifier
-): FlattenerResult<Props> {
+) {
   if (Array.isArray(chunk)) {
     const ruleSet: RuleSet<Props> = [];
 

@@ -531,7 +531,7 @@ describe('theming', () => {
     }
 
     const CompWithTheme = withTheme(Comp);
-    const ref = React.createRef();
+    const ref = React.createRef<Element>();
 
     renderIntoDocument(
       <ThemeProvider theme={{}}>
@@ -584,12 +584,10 @@ describe('theming', () => {
         white: '#fff',
         // Flow has limited support for Symbols and computed properties;
         // see <https://github.com/facebook/flow/issues/3258>.
-        // $FlowFixMe
         [Symbol.toStringTag]: 'Module',
       },
       // Flow has limited support for Symbols and computed properties;
       // see <https://github.com/facebook/flow/issues/3258>.
-      // $FlowFixMe
       [Symbol.toStringTag]: 'Module',
     };
 
