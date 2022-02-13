@@ -35,9 +35,8 @@ export type ExecutionContext = ExtensibleObject & {
 
 export type StyleFunction<Props> = (
   executionContext: ExecutionContext & Props
-) => string | StyledObject | CSSConstructor<Props>;
+) => string | StyledObject | CSSConstructor<Props> | StyleFunction<Props>;
 
-// Do not add IStyledComponent to this union, it breaks prop function interpolation in TS
 export type Interpolation<Props> =
   | StyleFunction<Props>
   | StyledObject
@@ -71,6 +70,7 @@ export type CSSConstructor<Props> = (
   strings: string[],
   ...interpolations: Interpolation<Props>[]
 ) => RuleSet<Props>;
+
 export type StyleSheet = {
   create: Function;
 };
@@ -159,7 +159,7 @@ interface CustomComponent<
 export interface IStyledComponent<Target extends WebTarget, Props = undefined>
   extends CustomComponent<Target, Props, ExecutionContext>,
     IStyledStatics<Props> {
-  defaultProps?: Partial<BaseExtensibleObject & Props>;
+  defaultProps?: Partial<ExtensibleObject & Props>;
   toString: () => string;
 }
 
@@ -180,7 +180,7 @@ export interface IStyledNativeStatics<OuterProps = undefined> extends CommonStat
 export interface IStyledNativeComponent<Target extends NativeTarget, Props = undefined>
   extends CustomComponent<Target, Props>,
     IStyledNativeStatics<Props> {
-  defaultProps?: Partial<Props>;
+  defaultProps?: Partial<ExtensibleObject & Props>;
 }
 
 export type IStyledNativeComponentFactory<Target extends NativeTarget, Props = undefined> = (

@@ -5,10 +5,8 @@ import {
   IStyledComponent,
   IStyledComponentFactory,
   RuleSet,
-  StyledObject,
   StyledOptions,
   StyledTarget,
-  StyleFunction,
   Styles,
 } from '../types';
 import { EMPTY_OBJECT } from '../utils/empties';
@@ -17,7 +15,7 @@ import css from './css';
 
 export interface Styled<Target extends StyledTarget, OuterProps = {}, OuterStatics = {}> {
   <Props = {}, Statics = {}>(
-    initialStyles: TemplateStringsArray | StyledObject | StyleFunction<OuterProps & Props>,
+    initialStyles: Styles<OuterProps & Props>,
     ...interpolations: Interpolation<OuterProps & Props>[]
   ): IStyledComponent<Target, OuterProps & Props> & OuterStatics & Statics;
   attrs<Props = OuterProps, Statics = {}>(
@@ -38,7 +36,7 @@ export interface Construct<
     options?: StyledOptions<OuterProps & Props>
   ): Styled<Target, OuterProps & Props, OuterStatics & Statics>;
   attrs<Props = {}, Statics = {}>(
-    attrs: Attrs<Props>
+    attrs: Attrs<OuterProps & Props>
   ): Construct<Target, OuterProps & Props, Statics>;
   withConfig<Props = {}, Statics = {}>(
     config: StyledOptions<OuterProps & Props>
@@ -74,7 +72,7 @@ export default function constructWithOptions<
     );
 
   /* Modify/inject new props at runtime */
-  templateFunction.attrs = <Props = {}, Statics = {}>(attrs: Attrs<Props>) =>
+  templateFunction.attrs = <Props = {}, Statics = {}>(attrs: Attrs<OuterProps & Props>) =>
     constructWithOptions<Target, OuterProps & Props, OuterStatics & Statics>(
       componentConstructor,
       tag,

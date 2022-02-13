@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import { renderIntoDocument } from 'react-dom/test-utils';
 import TestRenderer from 'react-test-renderer';
 import withTheme from '../hoc/withTheme';
-import ThemeProvider from '../models/ThemeProvider';
+import ThemeProvider, { DefaultTheme } from '../models/ThemeProvider';
 import { getRenderedCSS, resetStyled } from './utils';
 
 let styled: ReturnType<typeof resetStyled>;
@@ -544,7 +544,9 @@ describe('theming', () => {
 
   // https://github.com/styled-components/styled-components/issues/1130
   it('should not break without a ThemeProvider if it has a defaultTheme', () => {
-    const MyDiv = ({ theme }) => <div>{theme.color}</div>;
+    const MyDiv: React.FunctionComponent<{ theme: DefaultTheme }> = ({ theme }) => (
+      <div>{theme.color}</div>
+    );
     const MyDivWithTheme = withTheme(MyDiv);
     const theme = { color: 'red' };
     const newTheme = { color: 'blue' };
@@ -646,7 +648,6 @@ describe('theming', () => {
       // these tests need to be changed to use error boundaries instead
       const mock = jest.spyOn(console, 'error').mockImplementation(() => {});
       TestRenderer.create(
-        // $FlowInvalidInputTest
         <ThemeProvider theme={null}>
           <div />
         </ThemeProvider>
@@ -661,7 +662,6 @@ describe('theming', () => {
       // these tests need to be changed to use error boundaries instead
       const mock = jest.spyOn(console, 'error').mockImplementation(() => {});
       TestRenderer.create(
-        // $FlowInvalidInputTest
         <ThemeProvider theme={['a', 'b', 'c']}>
           <div />
         </ThemeProvider>
@@ -676,7 +676,7 @@ describe('theming', () => {
       // these tests need to be changed to use error boundaries instead
       const mock = jest.spyOn(console, 'error').mockImplementation(() => {});
       TestRenderer.create(
-        // $FlowInvalidInputTest
+        // @ts-expect-error invalid input
         <ThemeProvider theme={42}>
           <div />
         </ThemeProvider>
